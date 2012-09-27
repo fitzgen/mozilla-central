@@ -1187,9 +1187,7 @@ function SourceActor(aScript, aThreadActor) {
   this._script = aScript;
 }
 
-SourceActor.prototype = Object.create(PauseScopedActor.prototype);
-
-update(SourceActor.prototype, {
+SourceActor.prototype = {
   constructor: SourceActor,
   actorPrefix: "source",
 
@@ -1208,7 +1206,7 @@ update(SourceActor.prototype, {
   /**
    * Handler for the "source" packet.
    */
-  onSource: PauseScopedActor.withPaused(function SA_onSource(aRequest) {
+  onSource: function SA_onSource(aRequest) {
     this
       ._loadSource()
       .chainPromise(this._threadActor.createValueGrip.bind(this._threadActor))
@@ -1227,7 +1225,7 @@ update(SourceActor.prototype, {
       .chainPromise(function (aPacket) {
         this.conn.send(aPacket);
       }.bind(this));
-  }),
+  },
 
   /**
    * Convert a given string, encoded in a given character set, to unicode.
@@ -1331,7 +1329,7 @@ update(SourceActor.prototype, {
     return promise;
   }
 
-});
+};
 
 SourceActor.prototype.requestTypes = {
   "source": SourceActor.prototype.onSource
