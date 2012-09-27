@@ -1218,10 +1218,11 @@ SourceActor.prototype = {
       }.bind(this))
       .trap(function (aError) {
         return {
+          "from": this.actorID,
           "error": "loadSourceError",
           "message": "Could not load the source for " + this._script.url + "."
         };
-      })
+      }.bind(this))
       .chainPromise(function (aPacket) {
         this.conn.send(aPacket);
       }.bind(this));
