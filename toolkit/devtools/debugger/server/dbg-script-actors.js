@@ -1219,7 +1219,7 @@ SourceActor.prototype = {
       .trap(function (aError) {
         return {
           "error": "loadSourceError",
-          "message": "Could not load the source for " + aURL + "."
+          "message": "Could not load the source for " + this._script.url + "."
         };
       })
       .chainPromise(function (aPacket) {
