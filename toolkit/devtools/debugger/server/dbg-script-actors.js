@@ -783,13 +783,16 @@ ThreadActor.prototype = {
 
   /**
    * Create a grip for the given debuggee value.  If the value is an
-   * object, will create a pause-lifetime actor.
+   * object, will create an actor with the given lifetime.
    */
-  createValueGrip: function TA_createValueGrip(aValue) {
+  createValueGrip: function TA_createValueGrip(aValue, aPool=false) {
+    if (!aPool) {
+      aPool = this._pausePool;
+    }
     let type = typeof(aValue);
 
     if (type === "string" && this._stringIsLong(aValue)) {
-      return this.longStringGrip(aValue, this._pausePool);
+      return this.longStringGrip(aValue, aPool);
     }
 
     if (type === "boolean" || type === "string" || type === "number") {
@@ -805,7 +808,7 @@ ThreadActor.prototype = {
     }
 
     if (typeof(aValue) === "object") {
-      return this.pauseObjectGrip(aValue);
+      return this.objectGrip(aValue, aPool);
     }
 
     dbg_assert(false, "Failed to provide a grip for: " + aValue);
@@ -1209,7 +1212,9 @@ SourceActor.prototype = {
   onSource: function SA_onSource(aRequest) {
     this
       ._loadSource()
-      .chainPromise(this._threadActor.createValueGrip.bind(this._threadActor))
+      .chainPromise(function(aSource) {
+        this._threadActor.createValueGrip(aSource, this._threadLifetimePool);
+      }.bind(this))
       .chainPromise(function (aSourceGrip) {
         return {
           from: this.actorID,
