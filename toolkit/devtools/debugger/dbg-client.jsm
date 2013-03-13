@@ -423,7 +423,8 @@ DebuggerClient.prototype = {
 
     this._pendingRequests.push({ to: aRequest.to,
                                  request: aRequest,
-                                 onResponse: aOnResponse });
+                                 onResponse: aOnResponse,
+                                 startTime: +new Date });
     this._sendRequests();
   },
 
@@ -479,13 +480,13 @@ DebuggerClient.prototype = {
           return;
         }
 
-        let onResponse;
+        let request;
         // Don't count unsolicited notifications or pauses as responses.
         if (aPacket.from in this._activeRequests &&
             !(aPacket.type in UnsolicitedNotifications) &&
             !(aPacket.type == ThreadStateTypes.paused &&
               aPacket.why.type in UnsolicitedPauses)) {
-          onResponse = this._activeRequests[aPacket.from].onResponse;
+          request = this._activeRequests[aPacket.from];
           delete this._activeRequests[aPacket.from];
         }
 
@@ -505,8 +506,11 @@ DebuggerClient.prototype = {
         }
         this.notify(aPacket.type, aPacket);
 
-        if (onResponse) {
-          onResponse(aPacket);
+        if (request) {
+          request.onResponse(aPacket);
+          let id = "DEVTOOLS_DEBUGGER_RDP_REQUEST_RESPONSE_MS";
+          let histogram = Services.telemetry.getHistogramById(id);
+          histogram.add(+new Date - request.startTime);
         }
       } catch(ex) {
         dumpn("Error handling response: " + ex + " - stack:\n" + ex.stack);

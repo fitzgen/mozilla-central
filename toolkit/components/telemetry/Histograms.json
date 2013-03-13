@@ -2976,5 +2976,11 @@
     "high": "80 * 25",
     "n_buckets": "80 + 1",
     "description": "The time (in milliseconds) after showing a PopupNotification that the mainAction was first triggered"
+  },
+  "DEVTOOLS_DEBUGGER_RDP_REQUEST_RESPONSE_MS": {
+    "kind": "exponential",
+    "high": "5000",
+    "n_buckets": "100",
+    "description": "The time (in milliseconds) that it took a request to receive a response over the remote debugging protocol."
   }
 }
