@@ -50,12 +50,24 @@ function testSetBreakpoint() {
     }, function (aResponse, bpClient) {
       ok(!aResponse.error,
          "Should be able to set a breakpoint in a coffee script file.");
-      is(aResponse.actualLocation.url, EXAMPLE_URL + "binary_search.coffee",
-         "actualLocation.url should be source mapped");
-      is(aResponse.actualLocation.line, 5,
-         "actualLocation.line should be source mapped");
-      testHitBreakpoint();
+      testSetBreakpointBlankLine();
     });
+  });
+}
+
+function testSetBreakpointBlankLine() {
+  let { activeThread } = gDebugger.DebuggerController;
+  activeThread.setBreakpoint({
+      url: EXAMPLE_URL + "binary_search.coffee",
+      line: 3
+  }, function (aResponse, bpClient) {
+    ok(aResponse.actualLocation,
+       "Because 3 is empty, we should have an actualLocation");
+    is(aResponse.actualLocation.url, EXAMPLE_URL + "binary_search.coffee",
+       "actualLocation.url should be source mapped to the coffee file");
+    is(aResponse.actualLocation.line, 2,
+       "actualLocation.line should be source mapped back to 2");
+    testHitBreakpoint();
   });
 }
 

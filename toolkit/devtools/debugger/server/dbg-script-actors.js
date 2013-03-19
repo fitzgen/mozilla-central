@@ -502,6 +502,8 @@ ThreadActor.prototype = {
     let locationPromise = this.sources.getGeneratedLocation(originalSource,
                                                             originalLine)
     return locationPromise.then(function (aLocation) {
+      dump("FITZGEN: generated location = " + JSON.stringify(aLocation) + "\n");
+
       let line = aLocation.line;
       if (this.dbg.findScripts({ url: aLocation.url }).length == 0 || line < 0) {
         return { error: "noScript" };
@@ -519,7 +521,32 @@ ThreadActor.prototype = {
         column: aLocation.column
       };
 
-      return this._setBreakpoint(aLocation);
+      let response = this._setBreakpoint(aLocation);
+      // If the original location of our generated location is different from
+      // the original location we attempted to set the breakpoint on, we will
+      // need to know so that we can set actualLocation on the response.
+      let originalLocation = this.sources.getOriginalLocation(aLocation.url,
+                                                              aLocation.line);
+
+      return Promise.all(response, originalLocation)
+        .then(function ([aResponse, {url, line}]) {
+          if (aResponse.actualLocation) {
+            let actualOrigLocation = this.sources.getOriginalLocation(
+              aResponse.actualLocation.url, aResponse.actualLocation.line);
+            return actualOrigLocation.then(function ({ url, line }) {
+              if (url !== originalSource || line !== originalLine) {
+                aPacket.actualLocation = { url: url, line: line };
+              }
+              return aPacket;
+            });
+          }
+
+          if (url !== originalSource || line !== originalLine) {
+            aResponse.actualLocation = { url: url, line: line };
+          }
+
+          return aResponse;
+        });
     }.bind(this));
   },
 
@@ -605,45 +632,19 @@ ThreadActor.prototype = {
           breakpoints[actualLocation.line].actor) {
         actor.onDelete();
         delete breakpoints[aLocation.line];
-        // return {
-        //   actor: breakpoints[actualLocation.line].actor.actorID,
-        //   actualLocation: actualLocation
-        // };
-        let loc = actualLocation || location;
-        let promise = this.sources.getOriginalLocation(loc.url, loc.line);
-        return promise.then(function (aOrigLocation) {
-          let packet = {
-            actor: breakpoints[actualLocation.line].actor.actorID
-          };
-          if (actualLocation
-              || aOrigLocation.line !== location.line
-              || aOrigLocation.column !== location.column) {
-            packet.actualLocation = aOrigLocation;
-          }
-          return packet;
-        });
+        return {
+          actor: breakpoints[actualLocation.line].actor.actorID,
+          actualLocation: actualLocation
+        };
       } else {
         actor.location = actualLocation;
         breakpoints[actualLocation.line] = breakpoints[aLocation.line];
         breakpoints[actualLocation.line].line = actualLocation.line;
         delete breakpoints[aLocation.line];
-        // return {
-        //   actor: actor.actorID,
-        //   actualLocation: actualLocation
-        // };
-        let loc = actualLocation || location;
-        let promise = this.sources.getOriginalLocation(loc.url, loc.line);
-        return promise.then(function (aOrigLocation) {
-          let packet = {
-            actor: actor.actorID
-          };
-          if (actualLocation
-              || aOrigLocation.line !== location.line
-              || aOrigLocation.column !== location.column) {
-            packet.actualLocation = aOrigLocation;
-          }
-          return packet;
-        });
+        return {
+          actor: actor.actorID,
+          actualLocation: actualLocation
+        };
       }
     }
 

@@ -29,7 +29,8 @@ XPCOMUtils.defineLazyServiceGetter(this, "socketTransportService",
 XPCOMUtils.defineLazyModuleGetter(this, "WebConsoleClient",
                                   "resource://gre/modules/devtools/WebConsoleClient.jsm");
 
-let wantLogging = Services.prefs.getBoolPref("devtools.debugger.log");
+// let wantLogging = Services.prefs.getBoolPref("devtools.debugger.log");
+let wantLogging = true;
 
 function dumpn(str)
 {
@@ -423,6 +424,8 @@ DebuggerClient.prototype = {
    *        debugging server responds.
    */
   request: function DC_request(aRequest, aOnResponse) {
+    dump("REQUESTING " + JSON.stringify(aRequest, null, 2) + "\n");
+
     if (!this._connected) {
       throw Error("Have not yet received a hello packet from the server.");
     }
@@ -466,6 +469,8 @@ DebuggerClient.prototype = {
    *        Set true to not pass the packet through the compatibility layer.
    */
   onPacket: function DC_onPacket(aPacket, aIgnoreCompatibility=false) {
+    dump("RECEIVING " + JSON.stringify(aPacket, null, 2) + "\n");
+
     let packet = aIgnoreCompatibility
       ? aPacket
       : this.compat.onPacket(aPacket);
