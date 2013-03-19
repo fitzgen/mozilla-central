@@ -535,9 +535,9 @@ ThreadActor.prototype = {
               aResponse.actualLocation.url, aResponse.actualLocation.line);
             return actualOrigLocation.then(function ({ url, line }) {
               if (url !== originalSource || line !== originalLine) {
-                aPacket.actualLocation = { url: url, line: line };
+                aResponse.actualLocation = { url: url, line: line };
               }
-              return aPacket;
+              return aResponse;
             });
           }
 
@@ -546,7 +546,7 @@ ThreadActor.prototype = {
           }
 
           return aResponse;
-        });
+        }.bind(this));
     }.bind(this));
   },
 
