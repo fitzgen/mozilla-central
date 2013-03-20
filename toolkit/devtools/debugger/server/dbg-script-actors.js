@@ -260,15 +260,19 @@ ThreadActor.prototype = {
    *        The newest debuggee frame in the stack.
    * @param object aReason
    *        An object with a 'type' property containing the reason for the pause.
+   * @param function onPacket
+   *        Hook to modify the packet before it is sent. Feel free to return a
+   *        promise.
    */
-  _pauseAndRespond: function TA__pauseAndRespond(aFrame, aReason) {
+  _pauseAndRespond: function TA__pauseAndRespond(aFrame, aReason,
+                                                 onPacket=function (k) k) {
     try {
       let packet = this._paused(aFrame);
       if (!packet) {
         return undefined;
       }
       packet.why = aReason;
-      this.conn.send(packet);
+      resolve(onPacket(packet)).then(this.conn.send.bind(this.conn));
       return this._nest();
     } catch(e) {
       let msg = "Got an exception during TA__pauseAndRespond: " + e +
@@ -454,14 +458,23 @@ ThreadActor.prototype = {
     // Return request.count frames, or all remaining
     // frames if count is not defined.
     let frames = [];
-    for (; frame && (!count || i < (start + count)); i++) {
+    let promises = [];
+    for (; frame && (!count || i < (start + count)); i++, frame=frame.older) {
       let form = this._createFrameActor(frame).form();
       form.depth = i;
       frames.push(form);
-      frame = frame.older;
+
+      let promise = this.sources.getOriginalLocation(form.where.url,
+                                                     form.where.line)
+        .then(function (aOrigLocation) {
+          form.where = aOrigLocation;
+        });
+      promises.push(promise);
     }
 
-    return { frames: frames };
+    return Promise.all(promises).then(function () {
+      return { frames: frames };
+    });
   },
 
   onReleaseMany: function TA_onReleaseMany(aRequest) {
@@ -502,8 +515,6 @@ ThreadActor.prototype = {
     let locationPromise = this.sources.getGeneratedLocation(originalSource,
                                                             originalLine)
     return locationPromise.then(function (aLocation) {
-      dump("FITZGEN: generated location = " + JSON.stringify(aLocation) + "\n");
-
       let line = aLocation.line;
       if (this.dbg.findScripts({ url: aLocation.url }).length == 0 || line < 0) {
         return { error: "noScript" };
@@ -2007,7 +2018,14 @@ BreakpointActor.prototype = {
   hit: function BA_hit(aFrame) {
     // TODO: add the rest of the breakpoints on that line (bug 676602).
     let reason = { type: "breakpoint", actors: [ this.actorID ] };
-    return this.threadActor._pauseAndRespond(aFrame, reason);
+    this.threadActor._pauseAndRespond(aFrame, reason, function (aPacket) {
+      let { url, line } = aPacket.frame.where;
+      return this.threadActor.sources.getOriginalLocation(url, line)
+        .then(function (aOrigPosition) {
+          aPacket.frame.where = aOrigPosition;
+          return aPacket;
+        });
+    }.bind(this));
   },
 
   /**

@@ -92,7 +92,7 @@ function testHitBreakpoint() {
       is(aPacket.frame.environment.bindings.variables.pivot.value.type, "undefined",
          "'pivot' hasn't been assigned to yet");
 
-      testStepping();
+      waitForCaretPos(4, testStepping);
     });
 
     // This will cause the breakpoint to be hit, and put us back in the paused
@@ -121,11 +121,31 @@ function testStepping() {
       is(aPacket.frame.environment.bindings.variables.pivot.value.type, "undefined",
          "'pivot' hasn't been assigned to yet");
 
-      closeDebuggerAndFinish();
+      waitForCaretPos(5, closeDebuggerAndFinish);
     });
   }, {
     type: "step"
   });
+}
+
+function waitForCaretPos(number, callback)
+{
+  // Poll every few milliseconds until the source editor line is active.
+  let count = 0;
+  let intervalID = window.setInterval(function() {
+    info("count: " + count + " ");
+    if (++count > 50) {
+      ok(false, "Timed out while polling for the line.");
+      window.clearInterval(intervalID);
+      return closeDebuggerAndFinish();
+    }
+    if (gDebugger.DebuggerView.editor.getCaretPosition().line != number) {
+      return;
+    }
+    // We got the source editor at the expected line, it's safe to callback.
+    window.clearInterval(intervalID);
+    callback();
+  }, 100);
 }
 
 registerCleanupFunction(function() {
