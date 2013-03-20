@@ -40,7 +40,7 @@ function createRootActor()
                 url: s.url,
                 startLine: s.startLine,
                 lineCount: s.lineCount,
-                source: this._getSource(s.url).form()
+                source: this.sources.source(s.url).form()
               };
               scripts.push(script);
             }
