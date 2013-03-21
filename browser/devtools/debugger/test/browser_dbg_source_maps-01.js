@@ -96,7 +96,7 @@ function testHitBreakpoint() {
     });
 
     // This will cause the breakpoint to be hit, and put us back in the paused
-    // stated.
+    // state.
     executeSoon(function() {
       gDebuggee.binary_search([0, 2, 3, 5, 7, 10], 5);
     });

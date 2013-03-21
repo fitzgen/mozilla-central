@@ -47,7 +47,7 @@ function testBreakpointMapping(aName, aCallback)
       do_check_eq(aResponse.actualLocation.url,
                   "http://example.com/www/js/" + aName + ".js");
 
-      // The eval will cause us to resume, then we get and unsolicited pause
+      // The eval will cause us to resume, then we get an unsolicited pause
       // because of our breakpoint, we resume again to finish the eval, and
       // finally receive our last pause which has the result of the client
       // evaluation.

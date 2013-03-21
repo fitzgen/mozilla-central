@@ -46,6 +46,10 @@ function ThreadActor(aHooks, aGlobal)
   this.findGlobals = this.globalManager.findGlobals.bind(this);
   this.onNewGlobal = this.globalManager.onNewGlobal.bind(this);
   this.onNewSource = this.onNewSource.bind(this);
+
+  this._options = {
+    useSourceMaps: false
+  };
 }
 
 /**
@@ -210,9 +214,6 @@ ThreadActor.prototype = {
 
     this._state = "attached";
 
-    this._options = {
-      useSourceMaps: false
-    };
     update(this._options, aRequest.options || {});
 
     if (!this.dbg) {
@@ -240,7 +241,7 @@ ThreadActor.prototype = {
       // now.
       return null;
     } catch (e) {
-      Cu.reportError(e);
+      reportError(e);
       return { error: "notAttached", message: e.toString() };
     }
   },
@@ -716,7 +717,7 @@ ThreadActor.prototype = {
       // now.
       return null;
     } catch (e) {
-      Cu.reportError(e);
+      reportError(e);
       return { error: "notInterrupted", message: e.toString() };
     }
   },
@@ -1092,8 +1093,9 @@ ThreadActor.prototype = {
    * Create a source grip for the given script.
    */
   sourceGrip: function TA_sourceGrip(aScript) {
-    // TODO: Once we have Debugger.Source, this should be replaced with a
-    // weakmap mapping Debugger.Source instances to SourceActor instances.
+    // TODO bug 637572: Once we have Debugger.Source, this should be replaced
+    // with a weakmap mapping Debugger.Source instances to SourceActor
+    // instances.
     if (!this.threadLifetimePool.sourceActors) {
       this.threadLifetimePool.sourceActors = {};
     }
@@ -2018,7 +2020,7 @@ BreakpointActor.prototype = {
   hit: function BA_hit(aFrame) {
     // TODO: add the rest of the breakpoints on that line (bug 676602).
     let reason = { type: "breakpoint", actors: [ this.actorID ] };
-    this.threadActor._pauseAndRespond(aFrame, reason, function (aPacket) {
+    return this.threadActor._pauseAndRespond(aFrame, reason, function (aPacket) {
       let { url, line } = aPacket.frame.where;
       return this.threadActor.sources.getOriginalLocation(url, line)
         .then(function (aOrigPosition) {
@@ -2375,7 +2377,7 @@ ThreadSources.prototype = {
    * Add a source to the current set of sources.
    *
    * Right now this takes a URL, but in the future it should
-   * take a Debugger.Source. See bug XXXXXX.
+   * take a Debugger.Source. See bug 637572.
    *
    * @param string the source URL.
    * @returns a SourceActor representing the source or null.
@@ -2395,7 +2397,7 @@ ThreadSources.prototype = {
     try {
       this._onNewSource(actor);
     } catch (e) {
-      Cu.reportError(e);
+      reportError(e);
     }
     return actor;
   },
@@ -2414,7 +2416,7 @@ ThreadSources.prototype = {
           this.source(s) for (s of aSourceMap.sources)
         ];
       }.bind(this), function (e) {
-        Cu.reportError(e);
+        reportError(e);
         delete this._sourceMaps[aScript.sourceMapURL];
         delete this._sourceMapsByGeneratedSource[aScript.url];
         return [this.source(aScript.url)];
@@ -2481,6 +2483,7 @@ ThreadSources.prototype = {
         });
     }
 
+    // No source map
     return resolve({
       url: aSourceUrl,
       line: aLine
@@ -2657,4 +2660,12 @@ function convertToUnicode(aString, aCharset=null) {
   } catch(e) {
     return aString;
   }
+}
+
+/**
+ * Report the given error in the error console and to stdout.
+ */
+function reportError(aError) {
+  Cu.reportError(aError);
+  dumpn(aError.message + ":\n" + aError.stack);
 }

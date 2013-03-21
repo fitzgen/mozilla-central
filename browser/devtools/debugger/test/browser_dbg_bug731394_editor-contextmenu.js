@@ -67,8 +67,6 @@ function test()
     is(scripts.itemCount, 2,
       "Found the expected number of scripts.");
 
-    dump("\n\n\n\n\n\n\n\n\n\n\n" + editor.getText() + "\n\n\n\n\n\n\n\n\n\n\n\n");
-
     isnot(editor.getText().indexOf("debugger"), -1,
       "The correct script was loaded initially.");
 

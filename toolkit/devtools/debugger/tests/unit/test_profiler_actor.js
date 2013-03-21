@@ -159,7 +159,7 @@ function test_profiler_status()
         features: []
       }, function (aResponse) {
         do_check_true(Profiler.IsActive());
-        finishClient(client);
+        client.close();
       });
     });
   });
