@@ -49,7 +49,6 @@ BrowserRootActor.prototype = {
       applicationType: "browser",
       traits: {
         sources: true,
-        sourceMaps: true,
       }
     };
   },
