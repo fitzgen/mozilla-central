@@ -288,6 +288,14 @@ ThreadActor.prototype = {
    * Handle a protocol request to resume execution of the debuggee.
    */
   onResume: function TA_onResume(aRequest) {
+    if (this._state !== "paused") {
+      return {
+        error: "wrongState",
+        message: "Can't resume when debuggee isn't paused. Current state is '"
+          + this._state + "'"
+      };
+    }
+
     // In case of multiple nested event loops (due to multiple debuggers open in
     // different tabs or multiple debugger clients connected to the same tab)
     // only allow resumption in a LIFO order.
