@@ -112,7 +112,6 @@ function test()
     }
 
     executeSoon(function() {
-      dump("\n\n\n\n\n\n\n\n\n\n\n" + gDebugger.editor.getText() + "\n\n\n\n\n\n\n\n");
       contextMenu.hidePopup();
       closeDebuggerAndFinish();
     });

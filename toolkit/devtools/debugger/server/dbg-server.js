@@ -31,9 +31,9 @@ Promise.all = Promise.promised(Array);
 Cu.import("resource://gre/modules/devtools/SourceMap.jsm");
 
 function dumpn(str) {
-//  if (wantLogging) {
+  if (wantLogging) {
     dump("DBG-SERVER: " + str + "\n");
-//  }
+  }
 }
 
 function dbg_assert(cond, e) {
