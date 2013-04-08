@@ -2445,13 +2445,13 @@ ThreadSources.prototype = {
     let sourceMapURL = this._normalize(aScript.sourceMapURL,
                                        aScript.url);
     let map = this._fetchSourceMap(sourceMapURL)
-      .then(function (aSourceMap) {
+      .then((aSourceMap) => {
         for (let s of aSourceMap.sources) {
           this._generatedUrlsByOriginalUrl[s] = aScript.url;
           this._sourceMapsByOriginalSource[s] = resolve(aSourceMap);
         }
         return aSourceMap;
-      }.bind(this));
+      });
     this._sourceMapsByGeneratedSource[aScript.url] = map;
     return map;
   },
@@ -2463,7 +2463,7 @@ ThreadSources.prototype = {
     if (aAbsSourceMapURL in this._sourceMaps) {
       return this._sourceMaps[aAbsSourceMapURL];
     } else {
-      let promise = fetch(aAbsSourceMapURL).then(function (rawSourceMap) {
+      let promise = fetch(aAbsSourceMapURL).then((rawSourceMap) => {
         let map =  new SourceMapConsumer(rawSourceMap);
         let base = aAbsSourceMapURL.replace(/\/[^\/]+$/, '/');
         if (base.indexOf("data:") !== 0) {
@@ -2472,7 +2472,7 @@ ThreadSources.prototype = {
             : base;
         }
         return map;
-      }.bind(this));
+      });
       this._sourceMaps[aAbsSourceMapURL] = promise;
       return promise;
     }
@@ -2516,7 +2516,7 @@ ThreadSources.prototype = {
   getGeneratedLocation: function TS_getGeneratedLocation(aSourceUrl, aLine) {
     if (aSourceUrl in this._sourceMapsByOriginalSource) {
       return this._sourceMapsByOriginalSource[aSourceUrl]
-        .then(function (aSourceMap) {
+        .then((aSourceMap) => {
           let { line } = aSourceMap.generatedPositionFor({
             source: aSourceUrl,
             line: aLine,
@@ -2526,7 +2526,7 @@ ThreadSources.prototype = {
             url: this._generatedUrlsByOriginalUrl[aSourceUrl],
             line: line
           };
-        }.bind(this));
+        });
     }
 
     // No source map
@@ -2544,22 +2544,9 @@ ThreadSources.prototype = {
     let base = Services.io.newURI(aURLs.pop(), null, null);
     let url;
     while ((url = aURLs.pop())) {
-      // base = Services.io.newURI(url, null, this._isAbsolute(url) ? null : base);
       base = Services.io.newURI(url, null, base);
     }
     return base.spec;
-  },
-
-  /**
-   * Returns true if the url is absolute.
-   */
-  _isAbsolute: function (aURL) {
-    try {
-      Services.io.extractScheme(aURL);
-      return true;
-    } catch (e) {
-      return false;
-    }
   },
 
   iter: function TS_iter() {
