@@ -2421,9 +2421,8 @@ ThreadSources.prototype = {
     }
 
     return this.sourceMap(aScript)
-      .then((aSourceMap) => {
-        return [this.source(s) for (s of aSourceMap.sources)];
-      }, (e) => {
+      .then((aSourceMap) => [this.source(s) for (s of aSourceMap.sources)])
+      .then(null, (e) => {
         reportError(e);
         delete this._sourceMaps[this._normalize(aScript.sourceMapURL, aScript.url)];
         delete this._sourceMapsByGeneratedSource[aScript.url];
