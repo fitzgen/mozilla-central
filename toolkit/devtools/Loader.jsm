@@ -55,7 +55,11 @@ var BuiltinProvider = {
         "devtools/client": "resource://gre/modules/devtools/client",
 
         // Allow access to xpcshell test items from the loader.
-        "xpcshell-test": "resource://test"
+        "xpcshell-test": "resource://test",
+
+        // XXX: Have to define these as top level modules because of escodegen.
+        "source-map": "resource://gre/modules/devtools/SourceMap.jsm",
+        "estraverse": "resource://gre/modules/devtools/escodegen/estraverse.js",
       },
       globals: loaderGlobals
     });
