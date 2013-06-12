@@ -593,12 +593,20 @@ StackFrames.prototype = {
     // Make sure all the previous stackframes are removed before re-adding them.
     DebuggerView.StackFrames.empty();
 
+    let previousWasBlackBoxed = false;
     for (let frame of this.activeThread.cachedFrames) {
-      let { depth, where: { url, line } } = frame;
+      let { depth, where: { url, line }, isBlackBoxed } = frame;
       let frameLocation = NetworkHelper.convertToUnicode(unescape(url));
       let frameTitle = StackFrameUtils.getFrameTitle(frame);
 
-      DebuggerView.StackFrames.addFrame(frameTitle, frameLocation, line, depth);
+      if (isBlackBoxed) {
+        if (previousWasBlackBoxed) {
+          continue;
+        }
+        previousWasBlackBoxed = true;
+      }
+
+      DebuggerView.StackFrames.addFrame(frameTitle, frameLocation, line, depth, isBlackBoxed);
     }
     if (this.currentFrame == null) {
       DebuggerView.StackFrames.selectedDepth = 0;
@@ -997,6 +1005,19 @@ SourceScripts.prototype = {
 
     // Signal that scripts have been added.
     window.dispatchEvent(document, "Debugger:AfterSourcesAdded");
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  blackBox: function(aSource, aBlackBoxFlag) {
+    let sourceClient = this.activeThread.source(aSource);
+    sourceClient[aBlackBoxFlag ? "blackBox" : "unblackBox"](function({ error }) {
+      if (error) {
+        return void Cu.report(error);
+      }
+      // TODO FITZGEN: if paused: refresh the frames view
+    });
   },
 
   /**

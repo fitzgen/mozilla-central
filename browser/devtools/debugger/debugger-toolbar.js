@@ -424,8 +424,10 @@ StackFramesView.prototype = Heritage.extend(WidgetMethods, {
    *        The line number to be displayed in the list.
    * @param number aDepth
    *        The frame depth specified by the debugger.
+   * @param boolean aIsBlackBoxed
+   *        Whether or not the frame is black boxed.
    */
-  addFrame: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth) {
+  addFrame: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth, aIsBlackBoxed) {
     // Create the element node and menu entry for the stack frame item.
     let frameView = this._createFrameView.apply(this, arguments);
     let menuEntry = this._createMenuEntry.apply(this, arguments);
@@ -471,10 +473,12 @@ StackFramesView.prototype = Heritage.extend(WidgetMethods, {
    *        The line number to be displayed in the list.
    * @param number aDepth
    *        The frame depth specified by the debugger.
+   * @param boolean aIsBlackBoxed
+   *        Whether or not the frame is black boxed.
    * @return nsIDOMNode
    *         The stack frame view.
    */
-  _createFrameView: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth) {
+  _createFrameView: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth, aIsBlackBoxed) {
     let frameDetails =
       SourceUtils.trimUrlLength(
         SourceUtils.getSourceLabel(aSourceLocation),
@@ -492,6 +496,9 @@ StackFramesView.prototype = Heritage.extend(WidgetMethods, {
     let container = document.createElement("hbox");
     container.id = "stackframe-" + aDepth;
     container.className = "dbg-stackframe";
+    if (aIsBlackBoxed) {
+      container.className += " dbg-stackframe-black-boxed";
+    }
 
     container.appendChild(frameTitleNode);
     container.appendChild(frameDetailsNode);
@@ -510,10 +517,12 @@ StackFramesView.prototype = Heritage.extend(WidgetMethods, {
    *        The line number to be displayed in the list.
    * @param number aDepth
    *        The frame depth specified by the debugger.
+   * @param boolean aIsBlackBoxed
+   *        Whether or not the frame is black boxed.
    * @return object
    *         An object containing the stack frame command and menu item.
    */
-  _createMenuEntry: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth) {
+  _createMenuEntry: function(aFrameTitle, aSourceLocation, aLineNumber, aDepth, aIsBlackBoxed) {
     let frameDescription =
       SourceUtils.trimUrlLength(
         SourceUtils.getSourceLabel(aSourceLocation),
