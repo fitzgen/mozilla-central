@@ -1011,11 +1011,13 @@ SourceScripts.prototype = {
    * TODO FITZGEN
    */
   blackBox: function(aSource, aBlackBoxFlag) {
-    let sourceClient = this.activeThread.source(aSource);
+    const sourceClient = this.activeThread.source(aSource);
     sourceClient[aBlackBoxFlag ? "blackBox" : "unblackBox"](function({ error }) {
       if (error) {
-        return void Cu.report(error);
+        return void Cu.reportError(error);
       }
+
+      window.dispatchEvent(document, "Debugger:BlackboxChange", sourceClient);
       // TODO FITZGEN: if paused: refresh the frames view
     });
   },

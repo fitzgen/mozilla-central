@@ -12,6 +12,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MOCHITEST_BROWSER_TESTS = \
 	browser_dbg_aaa_run_first_leaktest.js \
+	browser_dbg_blackboxing-01.js \
 	browser_dbg_clean-exit.js \
 	browser_dbg_cmd.js \
 	browser_dbg_cmd_break.js \

@@ -554,7 +554,7 @@ function SideMenuItem(aGroup, aContents, aTooltip, aArrowFlag, aCheckboxFlag, aA
     checkbox.className = "side-menu-widget-item-checkbox";
     checkbox.setAttribute("checked", aAttachment.checked);
     checkbox.setAttribute("tooltiptext", aAttachment.checkboxTooltip);
-    checkbox.addEventListener("command", () => {
+    checkbox.addEventListener("command", function () {
       ViewHelpers.dispatchEvent(checkbox, "check", {
         checked: checkbox.checked,
         value: aTooltip,
