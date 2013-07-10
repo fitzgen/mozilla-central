@@ -497,7 +497,7 @@ StackFramesView.prototype = Heritage.extend(WidgetMethods, {
     container.id = "stackframe-" + aDepth;
     container.className = "dbg-stackframe";
     if (aIsBlackBoxed) {
-      container.className += " dbg-stackframe-black-boxed";
+      container.className += " dbg-stackframe-blackboxed";
     }
 
     container.appendChild(frameTitleNode);
