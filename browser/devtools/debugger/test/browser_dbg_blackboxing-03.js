@@ -3,7 +3,7 @@
 
 /**
  * Test that blackboxed frames are compressed into a single frame on the stack
- * view.
+ * view when we are already paused.
  */
 
 const TAB_URL = EXAMPLE_URL + "browser_dbg_blackboxing.html";
@@ -28,23 +28,9 @@ function test()
     gPane = aPane;
     gDebugger = gPane.panelWin;
 
-    testBlackboxSource();
-  });
-}
-
-function testBlackboxSource() {
-  once(gDebugger, "Debugger:SourceShown", function () {
-    const checkbox = getBlackBoxCheckbox(BLACKBOXME_URL);
-    ok(checkbox, "Should get the checkbox for blackboxing the source");
-
-    once(gDebugger, "Debugger:BlackboxChange", function (event) {
-      const sourceClient = event.detail;
-      ok(sourceClient.isBlackBoxed, "The source should be blackboxed now");
-
+    once(gDebugger, "Debugger:SourceShown", function () {
       testBlackboxStack();
     });
-
-    checkbox.click();
   });
 }
 
@@ -53,16 +39,36 @@ function testBlackboxStack() {
   activeThread.addOneTimeListener("framesadded", function () {
     const frames = gDebugger.DebuggerView.StackFrames.widget._list;
 
+    is(frames.querySelectorAll(".dbg-stackframe").length, 6,
+       "Should get 6 frames");
+
+    is(frames.querySelectorAll(".dbg-stackframe-blackboxed").length, 0,
+       "And none of them are black boxed");
+
+    testBlackboxSource();
+  });
+
+  gDebuggee.runTest();
+}
+
+function testBlackboxSource() {
+  const checkbox = getBlackBoxCheckbox(BLACKBOXME_URL);
+  ok(checkbox, "Should get the checkbox for blackboxing the source");
+
+  once(gDebugger, "Debugger:BlackboxChange", function (event) {
+    const sourceClient = event.detail;
+    ok(sourceClient.isBlackBoxed, "The source should be blackboxed now");
+
     is(frames.querySelectorAll(".dbg-stackframe").length, 3,
        "Should only get 3 frames");
 
     is(frames.querySelectorAll(".dbg-stackframe-blackboxed").length, 1,
-       "And one of them should be the combined blackboxed frames");
+       "And one of them is the combined blackboxed frames");
 
     closeDebuggerAndFinish();
   });
 
-  gDebuggee.runTest();
+  checkbox.click();
 }
 
 function getBlackBoxCheckbox(url) {
