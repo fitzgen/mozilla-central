@@ -1755,9 +1755,11 @@ SourceClient.prototype = {
   }, {
     telemetry: "BLACKBOX",
     after: function (aResponse) {
+      dump("FITZGEN: inside blackbox after\n");
       if (!aResponse.error) {
         this._isBlackBoxed = true;
         if (this._activeThread) {
+          dump("FITZGEN:     notifying blackboxchange\n");
           this._activeThread.notify("blackboxchange", this);
         }
       }
@@ -1776,9 +1778,11 @@ SourceClient.prototype = {
   }, {
     telemetry: "UNBLACKBOX",
     after: function (aResponse) {
+      dump("FITZGEN: inside unblackbox after\n");
       if (!aResponse.error) {
         this._isBlackBoxed = false;
         if (this._activeThread) {
+          dump("FITZGEN:     notifying blackboxchange\n");
           this._activeThread.notify("blackboxchange", this);
         }
       }

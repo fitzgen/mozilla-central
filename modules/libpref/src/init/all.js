@@ -447,7 +447,7 @@ pref("toolkit.identity.debug", false);
 pref("devtools.errorconsole.deprecation_warnings", true);
 
 // Disable remote debugging protocol logging
-pref("devtools.debugger.log", false);
+pref("devtools.debugger.log", true);
 // Disable remote debugging connections
 pref("devtools.debugger.remote-enabled", false);
 pref("devtools.debugger.remote-port", 6000);

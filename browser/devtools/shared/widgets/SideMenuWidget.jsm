@@ -549,19 +549,6 @@ function SideMenuItem(aGroup, aContents, aTooltip, aArrowFlag, aCheckboxFlag, aA
   this.window = aGroup.window;
   this.ownerView = aGroup;
 
-  let makeCheckbox = () => {
-    let checkbox = this.document.createElement("checkbox");
-    checkbox.className = "side-menu-widget-item-checkbox";
-    checkbox.setAttribute("checked", aAttachment.checkboxState);
-    checkbox.setAttribute("tooltiptext", aAttachment.checkboxTooltip);
-    checkbox.addEventListener("command", function () {
-      ViewHelpers.dispatchEvent(checkbox, "check", {
-        checked: checkbox.checked,
-      });
-    }, false);
-    return checkbox;
-  };
-
   if (aArrowFlag || aCheckboxFlag) {
     let container = this._container = this.document.createElement("hbox");
     container.className = "side-menu-widget-item";
@@ -572,7 +559,7 @@ function SideMenuItem(aGroup, aContents, aTooltip, aArrowFlag, aCheckboxFlag, aA
 
     // Show a checkbox before the content.
     if (aCheckboxFlag) {
-      let checkbox = this._checkbox = makeCheckbox();
+      let checkbox = this._checkbox = this._makeCheckbox(aAttachment);
       container.appendChild(checkbox);
     }
 
@@ -599,6 +586,33 @@ SideMenuItem.prototype = {
   get _orderedGroupElementsArray() this.ownerView._orderedGroupElementsArray,
   get _orderedMenuElementsArray() this.ownerView._orderedMenuElementsArray,
 
+  _makeCheckbox: function (aAttachment) {
+    dump("FITZGEN: inside _makeCheckbox\n");
+    for (let line of Error().stack.split(/\n/g)) {
+      dump("FITZGEN:     " + line + "\n");
+    }
+
+    let checkbox = this.document.createElement("checkbox");
+    checkbox.className = "side-menu-widget-item-checkbox";
+    checkbox.setAttribute("checked", aAttachment.checkboxState);
+    checkbox.setAttribute("tooltiptext", aAttachment.checkboxTooltip);
+
+    checkbox.addEventListener("command", function () {
+      ViewHelpers.dispatchEvent(checkbox, "check", {
+        checked: checkbox.checked,
+      });
+    }, false);
+
+    // Overwrite our default "we don't have a checkbox" error throwing method
+    // with a "checked" attribute setter.
+    this.setCheckboxState = (aCheckedState) => {
+      dump("FITZGEN: inside patched setCheckboxState\n");
+      checkbox.setAttribute.bind(checkbox, "checked", aCheckedState);
+    };
+
+    return checkbox;
+  },
+
   /**
    * Inserts this item in the parent group at the specified index.
    *
@@ -620,6 +634,15 @@ SideMenuItem.prototype = {
     }
 
     return this._target;
+  },
+
+  /**
+   * Set this item's checkbox state. Pass in true to check the checkbox, false
+   * to uncheck it.
+   */
+  setCheckboxState: function (aCheckedState) {
+    dump("FITZGEN: inside original setCheckboxState\n");
+    throw new Error("This item does not have a checkbox");
   },
 
   /**
