@@ -588,9 +588,6 @@ SideMenuItem.prototype = {
 
   _makeCheckbox: function (aAttachment) {
     dump("FITZGEN: inside _makeCheckbox\n");
-    for (let line of Error().stack.split(/\n/g)) {
-      dump("FITZGEN:     " + line + "\n");
-    }
 
     let checkbox = this.document.createElement("checkbox");
     checkbox.className = "side-menu-widget-item-checkbox";
@@ -598,6 +595,7 @@ SideMenuItem.prototype = {
     checkbox.setAttribute("tooltiptext", aAttachment.checkboxTooltip);
 
     checkbox.addEventListener("command", function () {
+      dump("FITZGEN: inside command listener\n");
       ViewHelpers.dispatchEvent(checkbox, "check", {
         checked: checkbox.checked,
       });

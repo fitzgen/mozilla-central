@@ -1743,6 +1743,7 @@ SourceClient.prototype = {
   get isBlackBoxed() this._isBlackBoxed,
   get actor() this._form.actor,
   get request() this._client.request,
+  get url() this._form.url,
 
   /**
    * Black box this SourceClient's source.

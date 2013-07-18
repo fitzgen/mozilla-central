@@ -5,10 +5,10 @@
 // should.
 
 const TEST_URL = EXAMPLE_URL + "browser_dbg_blackboxing.html";
-const BLACKBOXME_URL = EXAMPLE_URL + "browser_dbg_blackboxing_blackboxme.js";
-const BLACKBOXONE_URL = EXAMPLE_URL + "browser_dbg_blackboxing_one.js";
-const BLACKBOXTWO_URL = EXAMPLE_URL + "browser_dbg_blackboxing_two.js";
-const BLACKBOXTHREE_URL = EXAMPLE_URL + "browser_dbg_blackboxing_three.js";
+const BLACKBOXME_URL = EXAMPLE_URL + "blackboxing_blackboxme.js";
+const BLACKBOXONE_URL = EXAMPLE_URL + "blackboxing_one.js";
+const BLACKBOXTWO_URL = EXAMPLE_URL + "blackboxing_two.js";
+const BLACKBOXTHREE_URL = EXAMPLE_URL + "blackboxing_three.js";
 
 let gcli = Cu.import("resource://gre/modules/devtools/gcli.jsm", {}).gcli;
 

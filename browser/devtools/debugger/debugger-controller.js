@@ -887,7 +887,6 @@ StackFrames.prototype = {
  * source script cache.
  */
 function SourceScripts() {
-  dump("FITZGEN: inside SourceScripts\n");
   this._onNewGlobal = this._onNewGlobal.bind(this);
   this._onNewSource = this._onNewSource.bind(this);
   this._onSourcesAdded = this._onSourcesAdded.bind(this);
@@ -903,7 +902,6 @@ SourceScripts.prototype = {
    * Connect to the current thread client.
    */
   connect: function() {
-    dump("FITZGEN: inside SourceScripts' connect\n");
     dumpn("SourceScripts is connecting...");
     this.debuggerClient.addListener("newGlobal", this._onNewGlobal);
     this.debuggerClient.addListener("newSource", this._onNewSource);
@@ -952,8 +950,6 @@ SourceScripts.prototype = {
    * Handler for the debugger client's unsolicited newSource notification.
    */
   _onNewSource: function(aNotification, aPacket) {
-    dump("FITZGEN: inside _onNewSource\n");
-
     // Ignore bogus scripts, e.g. generated from 'clientEvaluate' packets.
     if (NEW_SOURCE_IGNORED_URLS.indexOf(aPacket.source.url) != -1) {
       return;
@@ -994,8 +990,6 @@ SourceScripts.prototype = {
    * Callback for the debugger's active thread getSources() method.
    */
   _onSourcesAdded: function(aResponse) {
-    dump("FITZGEN: inside _onSourcesAdded\n");
-
     if (aResponse.error) {
       Cu.reportError("Error getting sources: " + aResponse.message);
       return;
@@ -1038,11 +1032,9 @@ SourceScripts.prototype = {
    * Handler for the debugger client's 'blackboxchange' notification.
    */
   _onBlackBoxChange: function (aEvent, { url, isBlackBoxed }) {
-    dump("FITZGEN: inside _onBlackBoxChange\n");
     const item = DebuggerView.Sources.getItemByValue(url);
-    dump("FITZGEN:     item = " + item + "\n");
     if (item) {
-      item.setCheckboxState(!isBlackBoxed);
+      // TODO fitzgen: add way to mark this as checked
     }
   },
 
