@@ -913,7 +913,11 @@ ThreadActor.prototype = {
         return { error: "noScript" };
       }
 
-      let response = this._createAndStoreBreakpoint(aLocation);
+      let response = this._createAndStoreBreakpoint({
+        url: url,
+        line: line,
+        column: column
+      });
       // If the original location of our generated location is different from
       // the original location we attempted to set the breakpoint on, we will
       // need to know so that we can set actualLocation on the response.
@@ -950,7 +954,7 @@ ThreadActor.prototype = {
   /**
    * Create a breakpoint at the specified location and store it in the cache.
    */
-  _createAndStoreBreakpoint: function ({ url, line, column }) {
+  _createAndStoreBreakpoint: function (aLocation) {
     // Add the breakpoint to the store for later reuse, in case it belongs to a
     // script that hasn't appeared yet.
     this.breakpointStore.addBreakpoint(aLocation);
