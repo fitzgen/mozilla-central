@@ -49,6 +49,7 @@ var BuiltinProvider = {
         "": "resource://gre/modules/commonjs/",
         "main": "resource:///modules/devtools/main.js",
         "devtools": "resource:///modules/devtools",
+        "devtools/object-diff-patch": "resource://gre/modules/devtools/object-diff-patch",
         "devtools/server": "resource://gre/modules/devtools/server",
         "devtools/toolkit/webconsole": "resource://gre/modules/devtools/toolkit/webconsole",
         "devtools/styleinspector/css-logic": "resource://gre/modules/devtools/styleinspector/css-logic",
@@ -85,6 +86,7 @@ var SrcdirProvider = {
     let devtoolsDir = OS.Path.join(srcdir, "browser", "devtools");
     let devtoolsURI = this.fileURI(devtoolsDir);
     let toolkitURI = this.fileURI(OS.Path.join(srcdir, "toolkit", "devtools"));
+    let objectDiffPatchURI = this.fileURI(OS.Path.join(srcdir, "toolkit", "devtools", "object-diff-patch.js"));
     let serverURI = this.fileURI(OS.Path.join(srcdir, "toolkit", "devtools", "server"));
     let webconsoleURI = this.fileURI(OS.Path.join(srcdir, "toolkit", "devtools", "webconsole"));
     let cssLogicURI = this.fileURI(OS.Path.join(toolkitURI, "styleinspector", "css-logic"));
@@ -96,6 +98,7 @@ var SrcdirProvider = {
       },
       paths: {
         "": "resource://gre/modules/commonjs/",
+        "devtools/object-diff-patch": objectDiffPatchURI,
         "devtools/server": serverURI,
         "devtools/toolkit/webconsole": webconsoleURI,
         "devtools/client": clientURI,
