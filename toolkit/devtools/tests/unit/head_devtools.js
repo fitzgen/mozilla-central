@@ -5,6 +5,8 @@ const Cu = Components.utils;
 const Cr = Components.results;
 
 Cu.import("resource://gre/modules/devtools/DevToolsUtils.jsm");
+Cu.import("resource://gre/modules/devtools/Loader.jsm");
+const { require } = devtools;
 
 // Register a console listener, so console messages don't just disappear
 // into the ether.
@@ -30,11 +32,7 @@ let listener = {
       }
     }
 
-    // Make sure we exit all nested event loops so that the test can finish.
-    while (DebuggerServer.xpcInspector.eventLoopNestLevel > 0) {
-      DebuggerServer.xpcInspector.exitNestedEventLoop();
-    }
-    do_throw("head_dbg.js got console message: " + string + "\n");
+    do_throw("head_devtools.js got console message: " + string + "\n");
   }
 };
 

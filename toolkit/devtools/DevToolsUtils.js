@@ -6,8 +6,15 @@
 
 /* General utilities used throughout devtools. */
 
+// Note that when you define a new function here, you have to expose it in
+// DevToolsUtils.jsm as well or else Cu.import'd versions of this module won't
+// have the new function.
+
 let { Promise: promise } = Components.utils.import("resource://gre/modules/commonjs/sdk/core/promise.js", {});
 let { Services } = Components.utils.import("resource://gre/modules/Services.jsm", {});
+let { devtools } = Components.utils.import("resource://gre/modules/devtools/Loader.jsm", {});
+let { require } = devtools;
+let timers = require("sdk/timers");
 
 /**
  * Turn the error |aError| into a string, without fail.
@@ -134,3 +141,28 @@ this.yieldingEach = function yieldingEach(aArray, aFn) {
 
   return deferred.promise;
 }
+
+/**
+ * TODO FITZGEN
+ */
+this.throttle = function throttle(aMs, aFunc) {
+  const infallibleFunc = makeInfallible(aFunc);
+  let timeout = null;
+  let nextArgs = null;
+
+  return function throttledFunc(...args) {
+    if (timeout === null) {
+      infallibleFunc.apply(null, args);
+    } else {
+      nextArgs = args;
+    }
+
+    timeout = timers.setTimeout(() => {
+      timeout = null;
+      if (nextArgs) {
+        throttledFunc.apply(null, nextArgs);
+        nextArgs = null;
+      }
+    }, aMs);
+  };
+};
