@@ -181,6 +181,7 @@ let DebuggerController = {
       this.SourceScripts.disconnect();
       this.StackFrames.disconnect();
       this.ThreadState.disconnect();
+      this.Tracer.disconnect();
       this.disconnect();
 
       // Chrome debugging needs to close its parent process on shutdown.
@@ -207,39 +208,50 @@ let DebuggerController = {
       return this._connection;
     }
 
-    let deferred = promise.defer();
-    this._connection = deferred.promise;
+    let startedDebugging = promise.defer();
+    this._connection = startedDebugging.promise;
 
     if (!window._isChromeDebugger) {
       let target = this._target;
-      let { client, form: { chromeDebugger }, threadActor } = target;
+      debugger;
+      let { client, form: { chromeDebugger, traceActor }, threadActor } = target;
       target.on("close", this._onTabDetached);
       target.on("navigate", this._onTabNavigated);
       target.on("will-navigate", this._onTabNavigated);
 
+      if (!client) {
+        DevToolsUtils.reportException("No client found!");
+        return;
+      }
+      this.client = client;
+
       if (target.chrome) {
-        this._startChromeDebugging(client, chromeDebugger, deferred.resolve);
+        this._startChromeDebugging(chromeDebugger, startedDebugging.resolve);
       } else {
-        this._startDebuggingTab(client, threadActor, deferred.resolve);
+        this._startDebuggingTab(threadActor, startedDebugging.resolve);
+        const startedTracing = promise.defer();
+        this._startTracingTab(traceActor, startedTracing.resolve);
+
+        return promise.all([startedDebugging.promise, startedTracing.promise]);
       }
 
-      return deferred.promise;
+      return startedDebugging.promise;
     }
 
     // Chrome debugging needs to make its own connection to the debuggee.
     let transport = debuggerSocketConnect(
       Prefs.chromeDebuggingHost, Prefs.chromeDebuggingPort);
 
-    let client = new DebuggerClient(transport);
+    let client = this.client = new DebuggerClient(transport);
     client.addListener("tabNavigated", this._onTabNavigated);
     client.addListener("tabDetached", this._onTabDetached);
     client.connect(() => {
       client.listTabs(aResponse => {
-        this._startChromeDebugging(client, aResponse.chromeDebugger, deferred.resolve);
+        this._startChromeDebugging(aResponse.chromeDebugger, startedDebugging.resolve);
       });
     });
 
-    return deferred.promise;
+    return startedDebugging.promise;
   },
 
   /**
@@ -320,21 +332,13 @@ let DebuggerController = {
   /**
    * Sets up a debugging session.
    *
-   * @param DebuggerClient aClient
-   *        The debugger client.
    * @param string aThreadActor
    *        The remote protocol grip of the tab.
    * @param function aCallback
    *        A function to invoke once the client attached to the active thread.
    */
-  _startDebuggingTab: function(aClient, aThreadActor, aCallback) {
-    if (!aClient) {
-      Cu.reportError("No client found!");
-      return;
-    }
-    this.client = aClient;
-
-    aClient.attachThread(aThreadActor, (aResponse, aThreadClient) => {
+  _startDebuggingTab: function(aThreadActor, aCallback) {
+    this.client.attachThread(aThreadActor, (aResponse, aThreadClient) => {
       if (!aThreadClient) {
         Cu.reportError("Couldn't attach to thread: " + aResponse.error);
         return;
@@ -355,20 +359,12 @@ let DebuggerController = {
   /**
    * Sets up a chrome debugging session.
    *
-   * @param DebuggerClient aClient
-   *        The debugger client.
    * @param object aChromeDebugger
    *        The remote protocol grip of the chrome debugger.
    * @param function aCallback
    *        A function to invoke once the client attached to the active thread.
    */
-  _startChromeDebugging: function(aClient, aChromeDebugger, aCallback) {
-    if (!aClient) {
-      Cu.reportError("No client found!");
-      return;
-    }
-    this.client = aClient;
-
+  _startChromeDebugging: function(aChromeDebugger, aCallback) {
     aClient.attachThread(aChromeDebugger, (aResponse, aThreadClient) => {
       if (!aThreadClient) {
         Cu.reportError("Couldn't attach to thread: " + aResponse.error);
@@ -385,6 +381,25 @@ let DebuggerController = {
         aCallback();
       }
     }, { useSourceMaps: Prefs.sourceMapsEnabled });
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _startTracingTab: function(aTraceActor, aCallback) {
+    this.client.attachTracer(aTraceActor, (response, traceClient) => {
+      if (!traceClient) {
+        DevToolsUtils.reportError(new Error("Failed to attach to tracing actor."));
+        return;
+      }
+
+      this.traceClient = traceClient;
+      this.Tracer.connect();
+
+      if (aCallback) {
+        aCallback();
+      }
+    });
   },
 
   /**
@@ -1323,6 +1338,93 @@ SourceScripts.prototype = {
   }
 };
 
+function Tracer() {
+  this._trace = null;
+  this._idCounter = 0;
+  this.onCall = this.onCall.bind(this);
+  this.onReturn = this.onReturn.bind(this);
+}
+
+Tracer.prototype = {
+  get traceClient() {
+    return DebuggerController.traceClient;
+  },
+
+  get tracing() {
+    return !!this._trace;
+  },
+
+  connect: function() {
+    this._stack = [];
+    this.traceClient.addListener("enteredFrame", this.onCall);
+    this.traceClient.addListener("exitedFrame", this.onReturn);
+  },
+
+  disconnect: function() {
+    this._stack = null;
+    this.traceClient.removeListener("enteredFrame", this.onCall);
+    this.traceClient.removeListener("exitedFrame", this.onReturn);
+  },
+
+  startTracing: function() {
+    DebuggerView.Tracer.selectTab();
+    if (this.tracing) {
+      return;
+    }
+    this._trace = "dbg.trace" + Math.random();
+    this.traceClient.startTrace([
+      "name",
+      "location",
+      "parameterNames",
+      "arguments",
+      "return",
+      "throw",
+      "yield"
+    ], this._trace, ({ error }) => {
+      if (error) {
+        DevToolsUtils.reportException(error);
+        this._trace = null;
+      }
+    });
+  },
+
+  stopTracing: function() {
+    if (!this.tracing) {
+      return;
+    }
+    this._trace = null;
+    this.traceClient.stopTrace(this._trace);
+  },
+
+  onCall: function(aEvent, { name, location, parameterNames, arguments: args }) {
+    const item = {
+      name: name,
+      location: location,
+      id: this._idCounter++
+    };
+    this._stack.push(item);
+    DebuggerView.Tracer.push({
+      type: "call",
+      name: name,
+      location: location,
+      parameterNames: parameterNames,
+      arguments: args,
+      frameId: item.id
+    });
+  },
+
+  onReturn: function(aEvent, aPacket) {
+    const { name, id, location } = this._stack.pop();
+    DebuggerView.Tracer.push({
+      type: aPacket.why,
+      name: name,
+      location: location,
+      frameId: id,
+      returnVal: aPacket.return || aPacket.throw || aPacket.yield
+    });
+  }
+};
+
 /**
  * Handles breaking on event listeners in the currently debugged target.
  */
@@ -1883,6 +1985,7 @@ DebuggerController.StackFrames = new StackFrames();
 DebuggerController.SourceScripts = new SourceScripts();
 DebuggerController.Breakpoints = new Breakpoints();
 DebuggerController.Breakpoints.DOM = new EventListeners();
+DebuggerController.Tracer = new Tracer();
 
 /**
  * Export some properties to the global scope for easier access.

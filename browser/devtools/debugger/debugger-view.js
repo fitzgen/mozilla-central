@@ -63,6 +63,7 @@ let DebuggerView = {
     this.ChromeGlobals.initialize();
     this.StackFrames.initialize();
     this.Sources.initialize();
+    this.Tracer.initialize();
     this.WatchExpressions.initialize();
     this.EventListeners.initialize();
     this.GlobalSearch.initialize();
@@ -94,6 +95,7 @@ let DebuggerView = {
     this.ChromeGlobals.destroy();
     this.StackFrames.destroy();
     this.Sources.destroy();
+    this.Tracer.destroy();
     this.WatchExpressions.destroy();
     this.EventListeners.destroy();
     this.GlobalSearch.destroy();
@@ -156,7 +158,11 @@ let DebuggerView = {
     // Attach a controller that handles interfacing with the debugger protocol.
     VariablesViewController.attach(this.Variables, {
       getEnvironmentClient: aObject => gThreadClient.environment(aObject),
-      getObjectClient: aObject => gThreadClient.pauseGrip(aObject)
+      getObjectClient: aObject => {
+        return aObject instanceof TracerObject
+          ? this._syncGripClient(aObject.object)
+          : gThreadClient.pauseGrip(aObject)
+      }
     });
 
     // Relay events from the VariablesView.
@@ -186,6 +192,34 @@ let DebuggerView = {
       this._loadingText = L10N.getStr("loadingText");
       this._onEditorLoad(aCallback);
     });
+  },
+
+  _syncGripClient: function(aObject) {
+    return {
+      get isFrozen()     { return aObject.frozen; },
+      get isSealed()     { return aObject.sealed; },
+      get isExtensible() { return aObject.extensible; },
+
+      getParameterNames:         callback => callback(aObject),
+      getPrototypeAndProperties: callback => callback(aObject),
+      getPrototype:              callback => callback(aObject),
+
+      getOwnPropertyNames: (callback) => {
+        callback({
+          ownPropertyNames: (aObject.ownProperties) ?
+            AObject.keys(aObject.ownProperties) : []
+        });
+      },
+
+      getProperty: (property, callback) => {
+        callback({
+          descriptor: (aObject.ownProperties) ?
+            aObject.ownProperties[property] : null
+        });
+      },
+
+      getDisplayString: callback => callback("[object " + aObject.class + "]")
+    };
   },
 
   /**
@@ -510,6 +544,7 @@ let DebuggerView = {
   ChromeGlobals: null,
   StackFrames: null,
   Sources: null,
+  Tracer: null,
   Variables: null,
   WatchExpressions: null,
   EventListeners: null,
@@ -887,3 +922,7 @@ ResultsPanelContainer.prototype = Heritage.extend(WidgetMethods, {
   left: 0,
   top: 0
 });
+
+function TracerObject(aObject) {
+  this.object = aObject;
+}

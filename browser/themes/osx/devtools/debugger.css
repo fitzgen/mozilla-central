@@ -15,7 +15,7 @@
   min-width: 50px;
 }
 
-#sources-container + .devtools-side-splitter {
+#sources-pane + .devtools-side-splitter {
   -moz-border-start-color: transparent;
 }
 
@@ -66,7 +66,8 @@
 
 /* Black box message */
 
-#black-boxed-message {
+#black-boxed-message,
+#tracer-message {
   background: url(background-noise-toolbar.png) rgb(61,69,76);
   /* Prevent the container deck from aquiring the height from this message. */
   min-height: 1px;
@@ -83,6 +84,74 @@
 #black-boxed-message-button {
   margin-top: 1em;
   padding: .25em;
+}
+
+/* Tracer */
+
+#trace {
+  font-size: 150%;
+}
+
+#trace[checked] {
+  color: blue;
+}
+
+#tracer-traces {
+  overflow: auto;
+  background: url(background-noise-toolbar.png) #121c26;
+}
+
+.trace-item {
+  color: rgb(245, 247, 250);
+  user-select: text;g
+}
+
+.trace-item:hover,
+.trace-item.selected-matching {
+  background-color: #090d12;
+}
+
+.trace-item.selected {
+  background-color: #25394e;
+}
+
+.trace-call {
+  color: #99f;
+}
+
+.trace-return {
+  color: lightgreen;
+}
+
+.trace-yield {
+  color: lightgreen;
+}
+
+.trace-throw {
+  color: red;
+}
+
+.trace-param {
+  color: GrayText;
+}
+
+.trace-param > .trace-param-preview {
+  display: none;
+}
+
+.trace-param:hover > .trace-param-preview {
+  display: block;
+  position: absolute;
+  white-space: pre;
+}
+
+.trace-syntax {
+  color: lightblue;
+}
+
+.trace-file {
+  color: GrayText;
+  float: right;
 }
 
 /* ListWidget items */
@@ -151,7 +220,8 @@
 
 /* Instruments pane (watch expressions, variables, event listeners...) */
 
-#instruments-pane > tabs > tab {
+#instruments-pane > tabs > tab,
+#sources-pane > tabs > tab {
   min-height: 2em !important;
   padding: 0 !important;
 }

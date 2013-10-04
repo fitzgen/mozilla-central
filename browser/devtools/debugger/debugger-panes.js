@@ -5,6 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
 /**
  * Functions handling the sources UI.
  */
@@ -991,6 +993,306 @@ SourcesView.prototype = Heritage.extend(WidgetMethods, {
   _editorContextMenuLineNumber: -1,
   _conditionalPopupVisible: false
 });
+
+/**
+ * TODO FITZGEN
+ */
+function TracerView() {
+  this._selectedItem = null;
+  this._matchingItems = null;
+
+  this._onToggleTracing = this._onToggleTracing.bind(this);
+  this._onStartTracing = this._onStartTracing.bind(this);
+  this._onClear = this._onClear.bind(this);
+  this._onClick = this._onClick.bind(this);
+  this._onMouseOver = this._onMouseOver.bind(this);
+  this._onSearch = this._onSearch.bind(this);
+  this._onKeyDown = this._onKeyDown.bind(this);
+}
+
+TracerView.prototype = {
+  /**
+   * TODO FITZGEN
+   */
+  initialize: function() {
+    dumpn("Initializing the TracerView");
+
+    // Element -> data
+    this._elemsToData = new WeakMap();
+
+    this._traceButton = document.getElementById("trace");
+    this._tracerDeck = document.getElementById("tracer-deck");
+    this._startTraceButton = document.getElementById("start-tracing");
+    this._traces = document.getElementById("tracer-traces");
+    this._clearButton = document.getElementById("clear-tracer");
+    this._tabs = document.getElementById("sources-pane-tabs");
+    this._search = document.getElementById("tracer-search");
+
+    this._traceButton.addEventListener("click", this._onToggleTracing, false);
+    this._startTraceButton.addEventListener("click", this._onStartTracing, false);
+    this._clearButton.addEventListener("click", this._onClear, false);
+    this._traces.addEventListener("click", this._onClick, false);
+    this._traces.addEventListener("mouseover", this._onMouseOver, false);
+    this._traces.addEventListener("keydown", this._onKeyDown, false);
+    this._search.addEventListener("input", this._onSearch, false);
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  destroy: function() {
+    dumpn("Destroying the TracerView");
+
+    this._elemsToData.clear();
+
+    this._traceButton.removeEventListener("click", this._onToggleTrace, false);
+    this._startTraceButton.removeEventListener("click", this._onStartTracing, false);
+    this._clearButton.removeEventListener("click", this._onClear, false);
+    this._traces.removeEventListener("click", this._onClick, false);
+    this._traces.removeEventListener("mouseover", this._onMouseOver, false);
+    this._traces.removeEventListener("keydown", this._onKeyDown, false);
+    this._search.removeEventListener("input", this._onSearch, false);
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _onToggleTracing: function() {
+    if (DebuggerController.Tracer.tracing) {
+      this._onStopTracing();
+    } else {
+      this._onStartTracing();
+    }
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _onStartTracing: function() {
+    this._indent = 0;
+    this._tracerDeck.selectedIndex = 0;
+    this._traceButton.setAttribute("checked", true);
+    DebuggerController.Tracer.startTracing();
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _onStopTracing: function() {
+    this._traceButton.removeAttribute("checked");
+    DebuggerController.Tracer.stopTracing();
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _onClear: function() {
+    while (this._traces.firstChild) {
+      this._traces.removeChild(this._traces.firstChild);
+    }
+  },
+
+  _select: function(item) {
+    if (this._selectedItem) {
+      this._selectedItem.classList.remove("selected");
+    }
+    item.classList.add("selected");
+    this._selectedItem = item;
+
+    const data = this._elemsToData.get(item);
+    if (!data) {
+      DevToolsUtils.reportException(new Error("No data for element: " + item));
+      return;
+    }
+    const { location: { url, line } } = data;
+    DebuggerView.setEditorLocation(url, line, { noDebug: true });
+
+    DebuggerView.Variables.empty();
+    let scope;
+    if (data.type == "call") {
+      scope = DebuggerView.Variables.addScope("Parameters");
+      const params = DevToolsUtils.zip(data.parameterNames, data.arguments);
+      for (let [name, val] of params) {
+        this._populateVariable(name, scope, val);
+      }
+    } else {
+      let label;
+      switch (data.type) {
+      case "return":
+        label = "Return";
+        break;
+      case "throw":
+        label = "Exception";
+        break;
+      case "yield":
+        label = "Return";
+        break;
+      default:
+        DevToolsUtils.reportException("Unknown trace type: " + data.type);
+        return;
+      }
+
+      scope = DebuggerView.Variables.addScope(label);
+      scope.eval = null;
+      let varName = "<" + (data.type == "throw" ? "exception" : data.type) + ">";
+      let variable = this._populateVariable(varName,
+                                            scope,
+                                            data.returnVal);
+      variable.expanded = true;
+    }
+    scope.expand();
+    DebuggerView.showInstrumentsPane();
+  },
+
+  _populateVariable: function(aName, aParent, aValue) {
+    let child = aParent.addItem(aName, { value: aValue });
+
+    if (typeof aValue == "object" && aValue.type == "object") {
+      DebuggerView.Variables.controller.expand(child, new TracerObject(aValue));
+      for (let [,property] in child) {
+        property.twisty = false;
+      }
+    }
+
+    return child;
+  },
+
+  _onClick: function({ target }) {
+    let traceItem = target;
+    while (!traceItem.classList.contains("trace-item")) {
+      if (traceItem === this._traces) {
+        return;
+      }
+      traceItem = traceItem.parentNode;
+    }
+    this._select(traceItem);
+  },
+
+  _onMouseOver: function({ target }) {
+    if (!target.classList.contains("trace-item")) {
+      return;
+    }
+
+    if (this._matchingItems) {
+      this._matchingItems.forEach(e => e.classList.remove("selected-matching"));
+    }
+
+    this._matchingItems = [].slice.call(this._traces.querySelectorAll(
+      "[data-frameid=\"" + target.dataset.frameid + "\"]"));
+    this._matchingItems
+      .filter(e => e !== target)
+      .forEach(e => e.classList.add("selected-matching"));
+  },
+
+  _onKeyDown: function(e) {
+    console.log("keydown", e);
+  },
+
+  _onSearch: function() {
+    const query = this._search.value.trim().toLowerCase();
+    for (let elem of Cu.nondeterministicGetWeakMapKeys(this._elemsToData)) {
+      let data = this._elemsToData.get(elem);
+      let name = data.name.toLowerCase();
+      if (name.contains(query)) {
+        elem.removeAttribute("hidden");
+      } else {
+        elem.setAttribute("hidden", true);
+      }
+    }
+  },
+
+  selectTab: function() {
+    this._tabs.selectedIndex = 1;
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  _createView: function({ type, name, frameId, parameterNames, returnVal, location, arguments: args }) {
+    const view = document.createElementNS(HTML_NS, "div");
+    view.classList.add("trace-item");
+
+    const typeIcon = document.createElementNS(HTML_NS, "span");
+    typeIcon.classList.add("trace-" + type);
+    typeIcon.textContent = {
+      call: "→",
+      yield: "Y",
+      return: "←",
+      throw: "E",
+      terminated: "TERMINATED"
+    }[type];
+    view.appendChild(typeIcon);
+
+    view.appendChild(document.createTextNode(" " + name));
+
+    if (parameterNames) {
+      const syntax = (p) => {
+        const el = document.createElementNS(HTML_NS, "span");
+        el.textContent = p;
+        el.classList.add("trace-syntax");
+        return el;
+      };
+
+      view.appendChild(syntax("("));
+
+      for (let i = 0, n = parameterNames.length; i < n; i++) {
+        let param = document.createElementNS(HTML_NS, "span");
+        param.textContent = parameterNames[i];
+        param.classList.add("trace-param");
+        view.appendChild(param);
+
+        if (i + 1 !== n) {
+          view.appendChild(syntax(", "));
+        }
+      }
+
+      view.appendChild(syntax(")"));
+    }
+
+    // if (returnVal) {
+    //   console.log(returnVal);
+    // }
+
+    const file = document.createElementNS(HTML_NS, "span");
+    file.textContent = SourceUtils.trimUrl(location.url);
+    file.classList.add("trace-file");
+    view.appendChild(file);
+
+    view.dataset.frameid = frameId;
+    view.style.paddingLeft = this._indent + "em";
+    return view;
+  },
+
+  /**
+   * TODO FITZGEN
+   */
+  push: function(aItem) {
+    const { type, frameId } = aItem;
+
+    if (this._traces.childNodes.length > 1000) {
+      this._traces.removeChild(this._traces.firstChild);
+    }
+
+    if (type !== "call") {
+      this._indent--;
+    }
+
+    const view = this._createView(aItem);
+    this._elemsToData.set(view, aItem);
+
+    if (type === "call") {
+      this._indent++;
+    }
+
+    const { offsetHeight, scrollTop, scrollHeight } = this._traces;
+    const atBottom = offsetHeight + scrollTop >= scrollHeight;
+    console.log('atBottom', atBottom);
+    this._traces.appendChild(view);
+    if (atBottom) {
+      this._traces.scrollTop = this._traces.scrollHeight;
+    }
+  }
+};
 
 /**
  * Utility functions for handling sources.
@@ -2495,6 +2797,7 @@ LineResults.size = function() {
  * Preliminary setup for the DebuggerView object.
  */
 DebuggerView.Sources = new SourcesView();
+DebuggerView.Tracer = new TracerView();
 DebuggerView.WatchExpressions = new WatchExpressionsView();
 DebuggerView.EventListeners = new EventListenersView();
 DebuggerView.GlobalSearch = new GlobalSearchView();

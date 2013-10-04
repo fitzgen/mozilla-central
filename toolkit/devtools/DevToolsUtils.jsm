@@ -22,5 +22,6 @@ this.DevToolsUtils = {
   safeErrorString: safeErrorString,
   reportException: reportException,
   makeInfallible: makeInfallible,
+  zip: zip,
   yieldingEach: yieldingEach
 };
